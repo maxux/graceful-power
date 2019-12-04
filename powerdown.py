@@ -1,6 +1,7 @@
 import websocket
 import time
 import json
+from flask import Flask, render_template
 
 class MaxuxPowerOff_GPIO():
     def __init__(self):
@@ -103,8 +104,18 @@ class MaxuxPowerOff_Stripes():
             if current['r'] == 0 and current['g'] == 0 and current['b'] == 0:
                 break
 
-gpio = MaxuxPowerOff_GPIO()
-gpio.poweroff()
+app = Flask(__name__)
 
-stripes = MaxuxPowerOff_Stripes()
-stripes.poweroff()
+@app.route('/powerdown')
+def powerdown():
+    gpio = MaxuxPowerOff_GPIO()
+    gpio.poweroff()
+
+    stripes = MaxuxPowerOff_Stripes()
+    stripes.poweroff()
+
+    return "Gears halted"
+
+if __name__ == '__main__':
+    app.run(debug=False, host="0.0.0.0")
+
