@@ -114,7 +114,7 @@ def powerdown():
     stripes = MaxuxPowerOff_Stripes()
     stripes.poweroff()
 
-    return "Gears halted"
+    return render_template("powerdown.html")
 
 if __name__ == '__main__':
     app.run(debug=False, host="0.0.0.0")
