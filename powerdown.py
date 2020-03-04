@@ -1,7 +1,7 @@
 import websocket
 import time
 import json
-from flask import Flask, render_template
+from flask import Flask, render_template, make_response
 
 class MaxuxPowerOff_GPIO():
     def __init__(self):
@@ -114,7 +114,10 @@ def powerdown():
     stripes = MaxuxPowerOff_Stripes()
     stripes.poweroff()
 
-    return render_template("powerdown.html")
+    r = make_response(render_template('powerdown.html'))
+    r.headers.set('Access-Control-Allow-Origin', '*')
+
+    return r
 
 @app.route('/')
 def home():
