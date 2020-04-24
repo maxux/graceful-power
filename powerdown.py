@@ -14,7 +14,7 @@ class MaxuxPowerOff_GPIO():
             {
                 'name': 'lights',
                 'delay': 0,
-                'channels': ['CH3', 'CH4', 'CH5', 'CH6', 'CH7', 'CH13', 'CH14', 'CH15'],
+                'channels': ['CH3', 'CH4', 'CH5', 'CH6', 'CH7', 'CH10', 'CH13', 'CH14', 'CH15'],
             },
             {
                 'name': 'amplifiers',
