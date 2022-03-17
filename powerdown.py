@@ -1,6 +1,7 @@
 import websocket
 import time
 import json
+import socket
 from flask import Flask, render_template, make_response
 
 class MaxuxPowerOff_GPIO():
@@ -104,6 +105,38 @@ class MaxuxPowerOff_Stripes():
             if current['r'] == 0 and current['g'] == 0 and current['b'] == 0:
                 break
 
+class MaxuxPowerOff_DMX():
+    def __init__(self):
+        client = self.connect()
+        self.status = self.read(client)
+
+    def connect(self):
+        dmx = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        dmx.connect(("10.241.0.106", 47550))
+
+        return dmx
+
+    def msleep(self, ms):
+        time.sleep(ms / 1000.0)
+
+    def read(self, client):
+        client.send(b"X")
+        status = client.recv(512)
+
+        return bytearray(status)
+
+    def poweroff(self):
+        for i in range(1, 50):
+            for a in range(1, len(self.status)):
+                self.status[a] = int(self.status[a] / 1.1)
+
+            client = self.connect()
+            client.send(self.status)
+            client.close()
+
+            self.msleep(25)
+
+
 app = Flask(__name__)
 
 @app.route('/powerdown')
@@ -111,8 +144,15 @@ def powerdown():
     gpio = MaxuxPowerOff_GPIO()
     gpio.poweroff()
 
-    stripes = MaxuxPowerOff_Stripes()
-    stripes.poweroff()
+    # stripes = MaxuxPowerOff_Stripes()
+    # stripes.poweroff()
+
+    try:
+        a = MaxuxPowerOff_DMX()
+        a.poweroff()
+
+    except:
+        print("dmx failed")
 
     r = make_response(render_template('powerdown.html'))
     r.headers.set('Access-Control-Allow-Origin', '*')
