@@ -4,7 +4,7 @@ import json
 import socket
 from flask import Flask, render_template, make_response
 
-class MaxuxPowerOff_GPIO():
+class MaxuxPower_GPIO():
     def __init__(self):
         self.ws = websocket.create_connection("ws://10.242.1.4:8088/", subprotocols=["muxberrypi"])
 
@@ -33,6 +33,8 @@ class MaxuxPowerOff_GPIO():
                 'channels': ['CH9']
             }
         ]
+
+        self.default_preset = ['CH1', 'CH2', 'CH8', 'CH9', 'CH11', 'CH16']
 
     def __del__(self):
         self.ws.close()
@@ -68,6 +70,13 @@ class MaxuxPowerOff_GPIO():
                 print("[+] powering off: channel: %s" % channel)
                 self.send({'request': 'poweroff', 'gpio': self.status[channel]['id']})
 
+    def poweron(self):
+        for channel in self.default_preset:
+            print("[+] powering up: %s" % channel)
+            self.send({'request': 'poweron', 'gpio': self.status[channel]['id']})
+
+
+"""
 class MaxuxPowerOff_Stripes():
     def __init__(self):
         self.ws = websocket.create_connection("ws://10.241.0.40:7681/")
@@ -104,8 +113,9 @@ class MaxuxPowerOff_Stripes():
 
             if current['r'] == 0 and current['g'] == 0 and current['b'] == 0:
                 break
+"""
 
-class MaxuxPowerOff_DMX():
+class MaxuxPower_DMX():
     def __init__(self):
         client = self.connect()
         self.status = self.read(client)
@@ -136,19 +146,32 @@ class MaxuxPowerOff_DMX():
 
             self.msleep(25)
 
+    def poweron(self):
+        value = 30
+
+        for i in range(1, 50):
+            # for a in range(1, len(self.status)):
+            # self.status[a] = int(self.status[a] * 1.1)
+            value = value * 1.02
+            self.status[3] = int(value)
+
+            client = self.connect()
+            client.send(self.status)
+            client.close()
+
+            self.msleep(50)
+
+
 
 app = Flask(__name__)
 
 @app.route('/powerdown')
 def powerdown():
-    gpio = MaxuxPowerOff_GPIO()
+    gpio = MaxuxPower_GPIO()
     gpio.poweroff()
 
-    # stripes = MaxuxPowerOff_Stripes()
-    # stripes.poweroff()
-
     try:
-        a = MaxuxPowerOff_DMX()
+        a = MaxuxPower_DMX()
         a.poweroff()
 
     except:
@@ -158,6 +181,24 @@ def powerdown():
     r.headers.set('Access-Control-Allow-Origin', '*')
 
     return r
+
+@app.route('/powerup')
+def powerup():
+    gpio = MaxuxPower_GPIO()
+    gpio.poweron()
+
+    try:
+        a = MaxuxPower_DMX()
+        a.poweron()
+
+    except:
+        print("dmx failed")
+
+    r = make_response(render_template('powerup.html'))
+    r.headers.set('Access-Control-Allow-Origin', '*')
+
+    return r
+
 
 @app.route('/')
 def home():
