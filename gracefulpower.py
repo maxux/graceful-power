@@ -2,7 +2,16 @@ import websocket
 import time
 import json
 import socket
+import datetime
 from flask import Flask, render_template, make_response
+
+
+def time_between(s1, s2):
+    source = datetime.datetime.utcnow().time()
+    if s1 < s2:
+        return source >= s1 and source <= s2
+    else:
+        return source >= s1 or source <= s2
 
 class MaxuxPower_GPIO():
     def __init__(self):
@@ -146,22 +155,33 @@ class MaxuxPower_DMX():
 
             self.msleep(25)
 
-    def poweron(self):
-        value = 30
+    def fade(self, source, target, stages):
+        if len(source) != len(target):
+            return RuntimeError("Array are not the same length")
 
-        for i in range(1, 50):
-            # for a in range(1, len(self.status)):
-            # self.status[a] = int(self.status[a] * 1.1)
-            value = value * 1.02
-            self.status[3] = int(value)
+        steps = []
+        for i, val in enumerate(target):
+            steps.append((val - source[i]) / stages)
+
+        print(steps)
+
+        for step in range(0, stages + 1):
+            now = [0] * 512
+
+            for i, stage in enumerate(steps):
+                now[i] = int(source[i] + (stage * step))
 
             client = self.connect()
-            client.send(self.status)
+            client.send(bytes(now))
             client.close()
 
-            self.msleep(50)
+            self.msleep(20)
 
+    def poweron(self):
+        source = [0] * 32
+        target = [0, 20, 0, 50, 24, 0, 46, 32, 38, 0, 0, 72, 52, 24, 36, 56, 10, 44, 0, 0, 0, 26, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0]
 
+        self.fade(source, target, 50)
 
 app = Flask(__name__)
 
@@ -189,10 +209,14 @@ def powerup():
 
     try:
         a = MaxuxPower_DMX()
-        a.poweron()
 
-    except:
-        print("dmx failed")
+        # during the night
+        if time_between(datetime.time(19, 0), datetime.time(7, 0)):
+            print("Night mode, power on light")
+            a.poweron()
+
+    except Exception as e:
+        print(e)
 
     r = make_response(render_template('powerup.html'))
     r.headers.set('Access-Control-Allow-Origin', '*')
