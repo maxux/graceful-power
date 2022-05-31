@@ -213,7 +213,7 @@ def powerup():
         a = MaxuxPower_DMX()
 
         # during the night
-        if time_between(datetime.time(19, 0), datetime.time(7, 0)):
+        if time_between(datetime.time(20, 0), datetime.time(9, 0)): # utc
             print("Night mode, power on light")
             a.poweron()
 
