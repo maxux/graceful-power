@@ -80,9 +80,11 @@ class MaxuxPower_GPIO():
                 self.send({'request': 'poweroff', 'gpio': self.status[channel]['id']})
 
     def poweron(self):
+        print(self.status)
         for channel in self.default_preset:
             print("[+] powering up: %s" % channel)
             self.send({'request': 'poweron', 'gpio': self.status[channel]['id']})
+            self.msleep(100)
 
 
 """
