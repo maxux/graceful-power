@@ -133,7 +133,7 @@ class MaxuxPower_DMX():
 
     def connect(self):
         dmx = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        dmx.connect(("10.241.0.106", 47550))
+        dmx.connect(("10.241.0.51", 60877))
 
         return dmx
 
