@@ -3,7 +3,11 @@ import time
 import json
 import socket
 import datetime
+import syslog
 from flask import Flask, render_template, make_response
+
+syslog.openlog(ident="nicepower", logoption=syslog.LOG_PID)
+syslog.syslog("Initializing graceful power management")
 
 
 def time_between(s1, s2):
@@ -189,6 +193,8 @@ app = Flask(__name__)
 
 @app.route('/powerdown')
 def powerdown():
+    syslog.syslog("Graceful power off requested")
+
     gpio = MaxuxPower_GPIO()
     gpio.poweroff()
 
