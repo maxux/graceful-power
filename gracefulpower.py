@@ -1,4 +1,5 @@
 import websocket
+import requests
 import time
 import json
 import socket
@@ -19,35 +20,38 @@ def time_between(s1, s2):
 
 class MaxuxPower_GPIO():
     def __init__(self):
-        self.ws = websocket.create_connection("ws://10.242.1.4:8088/", subprotocols=["muxberrypi"])
+        self.ws = websocket.create_connection("ws://10.241.0.200:8088/", subprotocols=["muxberrypi"])
 
         initial = self.read()
         self.status = self.initialize(initial)
 
         self.priorities = [
             {
-                'name': 'lights',
+                'name': 'general',
                 'delay': 0,
-                'channels': ['CH3', 'CH4', 'CH5', 'CH6', 'CH7', 'CH10', 'CH13', 'CH14', 'CH15'],
+                # 'channels': ['CH1', 'CH2', 'CH4', 'CH5'],
+                'channels': ['CH1', 'CH2', 'CH3', 'CH5'],
             },
             {
                 'name': 'amplifiers',
                 'delay': 0,
-                'channels': ['CH11', 'CH12', 'CH16'],
+                'channels': ['CH6', 'CH7'],
             },
             {
                 'name': 'screens',
                 'delay': 0,
-                'channels': ['CH1', 'CH2', 'CH8'],
+                'channels': ['CH8'],
             },
             {
                 'name': 'sound rack',
                 'delay': 1000,
-                'channels': ['CH9']
+                # 'channels': ['CH3']
+                'channels': ['CH4']
             }
         ]
 
-        self.default_preset = ['CH1', 'CH2', 'CH8', 'CH9', 'CH11', 'CH16']
+        # self.default_preset = ['CH3', 'CH7', 'CH8']
+        self.default_preset = ['CH4', 'CH7', 'CH8']
 
     def __del__(self):
         self.ws.close()
@@ -137,7 +141,7 @@ class MaxuxPower_DMX():
 
     def connect(self):
         dmx = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        dmx.connect(("10.241.0.51", 60877))
+        dmx.connect(("10.241.0.200", 60877))
 
         return dmx
 
@@ -189,6 +193,31 @@ class MaxuxPower_DMX():
 
         self.fade(source, target, 50)
 
+class MaxuxPower_DMX_WebSocket():
+    def __init__(self):
+        self.ws = websocket.create_connection("ws://10.241.0.254:31501")
+
+    def __del__(self):
+        self.ws.close()
+
+    def read(self):
+        data = self.ws.recv()
+        print(data)
+        return json.loads(data)
+
+    def send(self, request, payload):
+        self.ws.send(json.dumps({'type': request, 'value': payload}))
+
+    def poweron(self):
+        self.send('load', 'Default')
+
+class MaxuxPower_Automation():
+    def __init__(self):
+        pass
+
+    def trigger(self, id):
+        return requests.get("http://10.241.0.193/trigger/%s" % id).json()
+
 app = Flask(__name__)
 
 @app.route('/powerdown')
@@ -205,6 +234,13 @@ def powerdown():
     except:
         print("dmx failed")
 
+    try:
+        automation = MaxuxPower_Automation()
+        automation.trigger(4)
+
+    except:
+        print("automation failed")
+
     r = make_response(render_template('powerdown.html'))
     r.headers.set('Access-Control-Allow-Origin', '*')
 
@@ -212,16 +248,20 @@ def powerdown():
 
 @app.route('/powerup')
 def powerup():
+    syslog.syslog("Waking up")
+
     gpio = MaxuxPower_GPIO()
     gpio.poweron()
 
     try:
-        a = MaxuxPower_DMX()
+        a = MaxuxPower_DMX_WebSocket()
+        print(a)
+        a.poweron()
 
         # during the night
-        if time_between(datetime.time(20, 0), datetime.time(9, 0)): # utc
-            print("Night mode, power on light")
-            a.poweron()
+        # if time_between(datetime.time(20, 0), datetime.time(9, 0)): # utc
+        #     print("Night mode, power on light")
+        #     a.poweron()
 
     except Exception as e:
         print(e)
